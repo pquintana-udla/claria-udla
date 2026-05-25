@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLARIA — Sistema de Alerta Temprana | UDLA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--red:#C10230;--black:#222222;--gray:#6f7271;--white:#fff;--light:#f5f5f5;--border:#e0e0e0;
+    --alto:#dc3545;--mod:#fd7e14;--bajo:#28a745;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Source Sans Pro',sans-serif;background:#f8f8f8;color:var(--black)}
+  /* HEADER */
+  header{background:var(--black);display:flex;align-items:center;padding:0 24px;height:64px;gap:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100}
+  .logo-bar{width:4px;height:36px;background:var(--red);border-radius:2px}
+  header h1{font-size:1.3rem;font-weight:700;color:var(--white);letter-spacing:.5px}
+  header span{font-size:.8rem;color:#aaa;margin-left:auto}
+  .live-badge{background:var(--red);color:#fff;font-size:.7rem;font-weight:700;padding:3px 8px;
+    border-radius:12px;display:flex;align-items:center;gap:4px}
+  .live-dot{width:6px;height:6px;background:#fff;border-radius:50%;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  /* TABS */
+  nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 24px}
+  nav button{padding:14px 20px;border:none;background:none;cursor:pointer;font-family:inherit;
+    font-size:.9rem;font-weight:600;color:var(--gray);border-bottom:3px solid transparent;
+    transition:all .2s}
+  nav button.active{color:var(--red);border-bottom-color:var(--red)}
+  nav button:hover:not(.active){color:var(--black)}
+  /* MAIN */
+  main{padding:24px;max-width:1400px;margin:0 auto}
+  .tab{display:none} .tab.active{display:block}
+  /* KPI CARDS */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+  .kpi{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border);
+    text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .kpi .num{font-size:2rem;font-weight:700;line-height:1}
+  .kpi .lbl{font-size:.75rem;color:var(--gray);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+  .kpi.alto .num{color:var(--alto)} .kpi.mod .num{color:var(--mod)} .kpi.bajo .num{color:var(--bajo)}
+  .kpi.main-kpi{border-left:4px solid var(--red)}
+  /* CHARTS GRID */
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .chart-card{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border);
+    box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .chart-card h3{font-size:.9rem;font-weight:700;color:var(--black);margin-bottom:16px;
+    padding-bottom:8px;border-bottom:2px solid var(--red)}
+  /* ALERTS */
+  .alerts-box{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border);
+    border-left:4px solid var(--alto);margin-bottom:24px}
+  .alert-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+  .alert-item:last-child{border-bottom:none}
+  .badge{padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;color:#fff}
+  .badge.ALTO{background:var(--alto)}.badge.MODERADO{background:var(--mod)}.badge.BAJO{background:var(--bajo)}
+  /* TABLE */
+  .table-controls{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .table-controls input,.table-controls select{padding:8px 12px;border:1px solid var(--border);
+    border-radius:6px;font-family:inherit;font-size:.85rem;outline:none}
+  .table-controls input:focus,.table-controls select:focus{border-color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th{background:var(--black);color:#fff;padding:10px 12px;text-align:left;font-weight:600;
+    font-size:.8rem;text-transform:uppercase;letter-spacing:.3px}
+  tr:nth-child(even){background:#fafafa}
+  tr:hover{background:#fff3f5}
+  td{padding:9px 12px;border-bottom:1px solid #eee}
+  .prog{width:80px;height:8px;background:#eee;border-radius:4px;display:inline-block;vertical-align:middle}
+  .prog-fill{height:100%;border-radius:4px;background:var(--bajo)}
+  .prog-fill.alto{background:var(--alto)}.prog-fill.mod{background:var(--mod)}
+  /* INDIVIDUAL */
+  .student-select{width:100%;max-width:400px;padding:10px 14px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;font-size:.95rem;margin-bottom:20px;outline:none}
+  .student-select:focus{border-color:var(--red)}
+  .profile-grid{display:grid;grid-template-columns:300px 1fr;gap:20px;margin-bottom:20px}
+  .gauge-wrap{background:var(--white);border-radius:10px;padding:24px;text-align:center;
+    border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .gauge-wrap h3{font-size:.85rem;font-weight:700;color:var(--gray);margin-bottom:8px}
+  .gauge-risk{font-size:1.6rem;font-weight:700;margin-top:8px}
+  .gauge-risk.ALTO{color:var(--alto)}.gauge-risk.MODERADO{color:var(--mod)}.gauge-risk.BAJO{color:var(--bajo)}
+  .treatments-card{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border)}
+  .treatments-card h3{font-size:.9rem;font-weight:700;margin-bottom:14px;
+    padding-bottom:8px;border-bottom:2px solid var(--red)}
+  .trat-row{display:flex;align-items:center;gap:10px;padding:5px 0}
+  .trat-name{width:180px;font-size:.85rem;color:var(--gray)}
+  .trat-bar{flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden}
+  .trat-bar-fill{height:100%;border-radius:5px;background:var(--bajo);transition:width .4s}
+  .trat-bar-fill.zero{background:#ddd}
+  .trat-val{width:40px;text-align:right;font-size:.85rem;font-weight:600}
+  /* METRICS */
+  .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+  .metric-card{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border);
+    text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .metric-card h3{font-size:.85rem;font-weight:700;color:var(--gray);margin-bottom:12px}
+  .metric-auc{font-size:2rem;font-weight:700;color:var(--red)}
+  .metric-sub{font-size:.8rem;color:var(--gray);margin-top:4px}
+  .metric-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700;margin-top:6px}
+  .metric-badge.best{background:#e8f5e9;color:var(--bajo)}
+  /* SPINNER */
+  .spinner{display:flex;justify-content:center;padding:40px}
+  .spinner::after{content:'';width:32px;height:32px;border:3px solid #eee;
+    border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* API STATUS */
+  .api-tag{position:fixed;bottom:12px;right:12px;background:var(--black);color:#fff;
+    font-size:.7rem;padding:4px 10px;border-radius:12px;opacity:.7}
+  /* RESPONSIVE */
+  @media(max-width:768px){.charts-grid,.profile-grid,.metrics-grid{grid-template-columns:1fr}
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-bar"></div>
+  <h1>CLARIA</h1>
+  <span style="font-size:.75rem;color:#ccc;margin-left:8px">Clinical Learning Analytics & Risk Intelligence | UDLA 2026-2</span>
+  <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <div class="live-badge"><div class="live-dot"></div>API LIVE</div>
+    <span id="lastUpdate" style="font-size:.7rem;color:#888"></span>
+  </span>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('dashboard')">📊 Dashboard General</button>
+  <button onclick="showTab('cohort')">👥 Vista Cohorte</button>
+  <button onclick="showTab('individual')">🔍 Vista Individual</button>
+  <button onclick="showTab('metrics')">📈 Métricas del Modelo</button>
+</nav>
+
+<main>
+
+<!-- ══ TAB 1: DASHBOARD ══ -->
+<div id="tab-dashboard" class="tab active">
+  <div id="kpi-container"><div class="spinner"></div></div>
+
+  <!-- Línea de tiempo del semestre (16 semanas) -->
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>📅 Línea de Tiempo del Semestre 2026-2 — 16 Semanas</h3>
+    <div style="overflow-x:auto;padding:8px 0">
+      <div id="semesterTimeline" style="display:flex;align-items:center;gap:0;min-width:640px;position:relative;padding:16px 0 32px 0">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:4px;font-size:.8rem;color:var(--gray)">
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle"></span>Cohorte prospectiva activa</span>
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#aaa;margin-right:4px;vertical-align:middle"></span>Semanas históricas / futuras</span>
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#e8f5e9;border:1px solid var(--bajo);margin-right:4px;vertical-align:middle"></span>Zona de intervención docente</span>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card"><h3>Distribución de Riesgo — Cohorte 2026-2</h3><canvas id="donutChart" height="220"></canvas></div>
+    <div class="chart-card"><h3>Distribución de Avance Clínico (%) — Semana 6</h3><canvas id="histChart" height="220"></canvas></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>Top 10 Estudiantes Mayor Riesgo</h3>
+    <canvas id="top10Chart" height="130"></canvas>
+  </div>
+  <div class="alerts-box">
+    <h3 style="font-size:.9rem;font-weight:700;margin-bottom:12px;color:var(--alto)">⚠️ Alertas Prioritarias — Mayor Riesgo de Repetición</h3>
+    <div id="alerts-list"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ══ TAB 2: COHORTE ══ -->
+<div id="tab-cohort" class="tab">
+  <div class="table-controls">
+    <input id="searchInput" type="text" placeholder="Buscar por ID..." oninput="filterTable()">
+    <select id="riesgoFilter" onchange="filterTable()">
+      <option value="">Todos los niveles</option>
+      <option value="ALTO">🔴 Alto Riesgo</option>
+      <option value="MODERADO">🟡 Moderado</option>
+      <option value="BAJO">🟢 Bajo Riesgo</option>
+    </select>
+    <span id="table-count" style="font-size:.85rem;color:var(--gray);align-self:center"></span>
+  </div>
+  <div style="overflow-x:auto;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+    <table id="cohortTable">
+      <thead><tr>
+        <th>Rank</th><th>ID Estudiante</th><th>Nivel Riesgo</th>
+        <th>P(Reprueba)</th><th>% Avance</th><th>IPC</th>
+        <th>Total Tratos</th><th>Avance Visual</th>
+      </tr></thead>
+      <tbody id="cohortBody"><tr><td colspan="8" style="text-align:center;padding:30px">
+        <div class="spinner"></div></td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ TAB 3: INDIVIDUAL ══ -->
+<div id="tab-individual" class="tab">
+  <select class="student-select" id="studentSelect" onchange="loadStudent()">
+    <option value="">-- Seleccione un estudiante --</option>
+  </select>
+  <div id="student-profile" style="display:none">
+    <div class="profile-grid">
+      <div class="gauge-wrap">
+        <h3>Probabilidad de Repetición</h3>
+        <canvas id="gaugeCanvas" width="250" height="160"></canvas>
+        <div class="gauge-risk" id="riskLabel">—</div>
+        <div style="font-size:.8rem;color:var(--gray);margin-top:4px" id="riskProb">—</div>
+        <div style="font-size:.75rem;color:#aaa;margin-top:8px" id="riskRank">—</div>
+      </div>
+      <div class="treatments-card">
+        <h3>Actividad Clínica por Tipo de Tratamiento</h3>
+        <div id="treatmentBars"></div>
+      </div>
+    </div>
+    <div class="treatments-card" style="margin-bottom:16px">
+      <h3>Probabilidades por Modelo</h3>
+      <div id="modelProbs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px"></div>
+    </div>
+    <div class="treatments-card">
+      <h3>Recomendaciones de Intervención</h3>
+      <div id="recommendations" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 4: MÉTRICAS ══ -->
+<div id="tab-metrics" class="tab">
+  <div id="metrics-container"><div class="spinner"></div></div>
+  <div class="charts-grid" style="margin-top:20px">
+    <div class="chart-card"><h3>Importancia de Variables Predictoras</h3><canvas id="featChart" height="300"></canvas></div>
+    <div class="chart-card"><h3>Métricas Comparativas (AUC · Accuracy · F1)</h3><canvas id="metricsBar" height="300"></canvas></div>
+  </div>
+</div>
+
+</main>
+
+<div class="api-tag">CLARIA v2.0 | API REST + SQLite</div>
+
+<script>
+// ══ ESTADO ══
+const API = '';  // vacío = misma URL base (funciona local y en producción)
+let allStudents = [];
+let charts = {};
+let metricsData = null;
+
+// ══ UTILIDADES ══
+const $ = id => document.getElementById(id);
+const fmt = (v, dec=3) => parseFloat(v||0).toFixed(dec);
+const pct = v => (parseFloat(v||0)*100).toFixed(1)+'%';
+
+async function apiFetch(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(`API ${path}: ${r.status}`);
+  return r.json();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  $('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ══ SEMESTER TIMELINE ══
+function renderSemesterTimeline(semanaActual) {
+  const totalWeeks = 16;
+  const container = document.getElementById('semesterTimeline');
+  if (!container) return;
+  const interventionStart = 6, interventionEnd = 8;
+  let html = '';
+  const weekWidth = Math.floor(600 / totalWeeks);
+  for (let w = 1; w <= totalWeeks; w++) {
+    const isActive = w === semanaActual;
+    const isIntervention = w >= interventionStart && w <= interventionEnd;
+    const bgColor = isActive ? 'var(--red)' : isIntervention ? '#c8e6c9' : '#e0e0e0';
+    const textColor = isActive ? '#fff' : '#555';
+    const border = isIntervention && !isActive ? '2px solid var(--bajo)' : '2px solid transparent';
+    const size = isActive ? '36px' : '28px';
+    const marginTop = isActive ? '0' : '4px';
+    html += `
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative">
+        ${w > 1 ? '<div style="position:absolute;top:18px;left:-50%;width:100%;height:2px;background:#ddd;z-index:0"></div>' : ''}
+        <div title="Semana ${w}${isActive?' — Cohorte Prospectiva Activa':''}" style="
+          width:${size};height:${size};border-radius:50%;background:${bgColor};
+          display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;
+          color:${textColor};border:${border};position:relative;z-index:1;margin-top:${marginTop};
+          cursor:default;transition:all .2s;box-shadow:${isActive?'0 0 0 4px rgba(193,2,48,.25)':'none'}">
+          ${w}
+        </div>
+        ${isActive ? `<div style="position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);font-size:.65rem;font-weight:700;color:var(--red);white-space:nowrap">▲ Sem. 6</div>` : ''}
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ══ TAB 1: DASHBOARD ══
+async function loadDashboard() {
+  const d = await apiFetch('/api/summary');
+  const m = d.ensemble_metrics;
+  renderSemesterTimeline(d.semana_datos || 6);
+
+  // KPIs
+  $('kpi-container').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi main-kpi"><div class="num">${d.total_estudiantes}</div><div class="lbl">Estudiantes Evaluados</div></div>
+      <div class="kpi main-kpi"><div class="num">${pct(d.avg_pct_avance)}</div><div class="lbl">Avance Promedio</div></div>
+      <div class="kpi main-kpi"><div class="num">${fmt(d.avg_ipc,3)}</div><div class="lbl">IPC Promedio</div></div>
+      <div class="kpi alto"><div class="num">${d.riesgo_dist.ALTO||0}</div><div class="lbl">🔴 Alto Riesgo</div></div>
+      <div class="kpi mod"><div class="num">${d.riesgo_dist.MODERADO||0}</div><div class="lbl">🟡 Moderado</div></div>
+      <div class="kpi bajo"><div class="num">${d.riesgo_dist.BAJO||0}</div><div class="lbl">🟢 Bajo Riesgo</div></div>
+      <div class="kpi main-kpi"><div class="num">${(m.auc*100).toFixed(2)}%</div><div class="lbl">AUC Ensemble</div></div>
+    </div>`;
+
+  // Donut
+  destroyChart('donut');
+  charts['donut'] = new Chart($('donutChart'), {
+    type:'doughnut',
+    data:{labels:['Alto Riesgo','Moderado','Bajo Riesgo'],
+          datasets:[{data:[d.riesgo_dist.ALTO,d.riesgo_dist.MODERADO,d.riesgo_dist.BAJO],
+                     backgroundColor:['#dc3545','#fd7e14','#28a745'],borderWidth:2}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+
+  // Histograma
+  const hd = d.histograma_avance;
+  destroyChart('hist');
+  charts['hist'] = new Chart($('histChart'), {
+    type:'bar',
+    data:{labels:Object.keys(hd),
+          datasets:[{label:'Estudiantes',data:Object.values(hd),
+                     backgroundColor:'rgba(193,2,48,.7)',borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+             scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+
+  // Top10
+  const t = d.top10_mayor_riesgo;
+  destroyChart('top10');
+  charts['top10'] = new Chart($('top10Chart'), {
+    type:'bar',
+    data:{labels:t.map(s=>s.estudiante_id.slice(-8)),
+          datasets:[{label:'P(Reprueba)',
+                     data:t.map(s=>(parseFloat(s.prob_Ensemble)).toFixed(3)),
+                     backgroundColor:t.map(s=>s.nivel_riesgo==='ALTO'?'#dc3545':s.nivel_riesgo==='MODERADO'?'#fd7e14':'#28a745'),
+                     borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+             scales:{x:{min:0,max:1,ticks:{callback:v=>(v*100)+'%'}}}}
+  });
+
+  // Alertas
+  $('alerts-list').innerHTML = t.slice(0,5).map(s=>`
+    <div class="alert-item">
+      <span class="badge ${s.nivel_riesgo}">${s.nivel_riesgo}</span>
+      <strong style="font-size:.85rem">${s.estudiante_id}</strong>
+      <span style="color:var(--gray);font-size:.8rem">P(Reprueba)=${(parseFloat(s.prob_Ensemble)*100).toFixed(1)}% · Avance ${pct(s.pct_avance)}</span>
+    </div>`).join('');
+
+  $('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString();
+}
+
+// ══ TAB 2: COHORTE ══
+async function loadCohort() {
+  const d = await apiFetch('/api/students?limit=200');
+  allStudents = d.students;
+  renderTable(allStudents);
+}
+
+function renderTable(students) {
+  $('table-count').textContent = `Mostrando ${students.length} estudiantes`;
+  $('cohortBody').innerHTML = students.map(s => {
+    const pRisk = parseFloat(s.prob_Ensemble||0);
+    const avance = parseFloat(s.pct_avance||0);
+    const cls = s.nivel_riesgo==='ALTO'?'alto':s.nivel_riesgo==='MODERADO'?'mod':'';
+    return `<tr>
+      <td><strong>${s.rank_riesgo}</strong></td>
+      <td style="font-family:monospace;font-size:.8rem">${s.estudiante_id}</td>
+      <td><span class="badge ${s.nivel_riesgo}">${s.nivel_riesgo}</span></td>
+      <td><strong style="color:${s.nivel_riesgo==='ALTO'?'var(--alto)':s.nivel_riesgo==='MODERADO'?'var(--mod)':'var(--bajo)'}">${(pRisk*100).toFixed(1)}%</strong></td>
+      <td>${pct(s.pct_avance)}</td>
+      <td>${fmt(s.ipc,3)}</td>
+      <td>${s.total_tratamientos}</td>
+      <td><div class="prog"><div class="prog-fill ${cls}" style="width:${Math.min(avance*100,100)}%"></div></div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray)">Sin resultados</td></tr>';
+}
+
+function filterTable() {
+  const q = $('searchInput').value.toLowerCase();
+  const rf = $('riesgoFilter').value;
+  const filtered = allStudents.filter(s =>
+    (!q || s.estudiante_id.toLowerCase().includes(q)) &&
+    (!rf || s.nivel_riesgo === rf)
+  );
+  renderTable(filtered);
+}
+
+// ══ TAB 3: INDIVIDUAL ══
+async function loadStudentList() {
+  const d = await apiFetch('/api/students?limit=200');
+  const sel = $('studentSelect');
+  d.students.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.estudiante_id;
+    opt.textContent = `[${s.nivel_riesgo}] ${s.estudiante_id} — P=${(parseFloat(s.prob_Ensemble)*100).toFixed(1)}%`;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadStudent() {
+  const id = $('studentSelect').value;
+  if (!id) { $('student-profile').style.display='none'; return; }
+  const s = await apiFetch(`/api/students/${encodeURIComponent(id)}`);
+  $('student-profile').style.display='block';
+
+  // Gauge
+  const rp = parseFloat(s.prob_Ensemble||0);
+  const canvas = $('gaugeCanvas'); const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx=125,cy=140,r=100,start=Math.PI,end=2*Math.PI;
+  const color = s.nivel_riesgo==='ALTO'?'#dc3545':s.nivel_riesgo==='MODERADO'?'#fd7e14':'#28a745';
+  ctx.beginPath(); ctx.arc(cx,cy,r,start,end); ctx.strokeStyle='#eee'; ctx.lineWidth=18; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,start,start+rp*Math.PI);
+  ctx.strokeStyle=color; ctx.lineWidth=18; ctx.lineCap='round'; ctx.stroke();
+  ctx.fillStyle=color; ctx.font='bold 28px Source Sans Pro';
+  ctx.textAlign='center'; ctx.fillText((rp*100).toFixed(1)+'%',cx,cy-20);
+
+  $('riskLabel').textContent=s.nivel_riesgo; $('riskLabel').className='gauge-risk '+s.nivel_riesgo;
+  $('riskProb').textContent=`Probabilidad de Repetición: ${(rp*100).toFixed(1)}%`;
+  $('riskRank').textContent=`Posición en ranking: #${s.rank_riesgo} de 98`;
+
+  // Barras de tratamientos
+  const TRATS = ['HISTORIA','PROFILAXIS','R. SIMPLE','R. COMPUESTA','R. ANTERIOR',
+                 'ENDODONCIA','EXODONCIA','CORONA','INCRUSTACIÓN','P. REMOVIBLE','T. PERIODONTAL'];
+  const maxVal = Math.max(...TRATS.map(t=>parseInt(s[t]||0)),1);
+  $('treatmentBars').innerHTML = TRATS.map(t=>{
+    const v=parseInt(s[t]||0); const w=(v/maxVal*100).toFixed(0);
+    return `<div class="trat-row">
+      <span class="trat-name">${t}</span>
+      <div class="trat-bar"><div class="trat-bar-fill ${v===0?'zero':''}" style="width:${w}%"></div></div>
+      <span class="trat-val">${v}</span>
+    </div>`;
+  }).join('');
+
+  // Probabilidades modelos
+  $('modelProbs').innerHTML = [
+    ['Logistic Regression','prob_LR'],['Random Forest','prob_RF'],['Ensemble','prob_Ensemble']
+  ].map(([name,key])=>{
+    const val=(parseFloat(s[key]||0)*100).toFixed(1);
+    return `<div style="text-align:center;padding:12px;background:#fafafa;border-radius:8px">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--red)">${val}%</div>
+      <div style="font-size:.75rem;color:var(--gray);margin-top:4px">${name}</div>
+      <div style="font-size:.7rem;color:#aaa">P(Reprueba)</div>
+    </div>`;
+  }).join('');
+
+  // Recomendaciones
+  const recs=[];
+  if(parseFloat(s.pct_avance)<0.2) recs.push('⚠️ Avance clínico muy bajo. Se recomienda tutoría urgente.');
+  if(parseInt(s.total_tratamientos)<5) recs.push('⚠️ Menos de 5 tratamientos realizados. Revisar disponibilidad de pacientes.');
+  if(parseInt(s.HISTORIA||0)===0) recs.push('📋 Sin historias clínicas registradas. Iniciar con anamnesis.');
+  if(parseInt(s.PROFILAXIS||0)===0) recs.push('🦷 Sin profilaxis. Prioridad para activar actividad clínica.');
+  if(recs.length===0) recs.push('✅ Perfil sin alertas críticas en esta semana. Continuar monitoreo.');
+  $('recommendations').innerHTML = recs.map(r=>`<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:.9rem">${r}</div>`).join('');
+}
+
+// ══ TAB 4: MÉTRICAS ══
+async function loadMetrics() {
+  const [md, fd] = await Promise.all([apiFetch('/api/metrics'), apiFetch('/api/features?top=15')]);
+  metricsData = md;
+
+  // Tarjetas de métricas
+  $('metrics-container').innerHTML = `
+    <div class="metrics-grid">` +
+    md.models.map((m,i)=>`
+      <div class="metric-card">
+        <h3>${m.model}</h3>
+        <div class="metric-auc">${(m.auc*100).toFixed(2)}%</div>
+        <div class="metric-sub">AUC-ROC</div>
+        <div style="margin-top:10px;font-size:.85rem;color:var(--gray)">
+          Acc: ${(m.accuracy*100).toFixed(1)}% · F1: ${(m.f1*100).toFixed(1)}%
+        </div>
+        <div style="margin-top:8px;font-size:.8rem;color:#999">
+          TP:${m.tp} FP:${m.fp} FN:${m.fn} TN:${m.tn}
+        </div>
+        ${i===0?'<span class="metric-badge best">★ Mejor AUC</span>':''}
+      </div>`).join('') +
+    `<div class="metric-card">
+      <h3>Configuración del Ensemble</h3>
+      <div class="metric-auc">${md.n_features}</div>
+      <div class="metric-sub">Variables Predictoras</div>
+      <div style="margin-top:10px;font-size:.85rem;color:var(--gray)">
+        Entrenamiento: ${md.n_train} · Predicción: ${md.n_pred}
+      </div>
+      <div style="margin-top:8px;font-size:.8rem;color:#999">
+        Semestre: ${md.semestre} · Semana ${md.semana_datos}
+      </div>
+    </div>
+    </div>`;
+
+  // Features chart
+  const feats = fd.features;
+  destroyChart('feat');
+  charts['feat'] = new Chart($('featChart'), {
+    type:'bar',
+    data:{labels:feats.map(f=>f.feature),
+          datasets:[{label:'Importancia',data:feats.map(f=>(f.importance*100).toFixed(2)),
+                     backgroundColor:'rgba(193,2,48,.8)',borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+             scales:{x:{ticks:{callback:v=>v+'%'}}}}
+  });
+
+  // Métricas comparativas
+  destroyChart('metricsBar');
+  charts['metricsBar'] = new Chart($('metricsBar'), {
+    type:'bar',
+    data:{labels:md.models.map(m=>m.model.split(' ')[0]+' '+m.model.split(' ')[1]),
+          datasets:[
+            {label:'AUC',data:md.models.map(m=>+(m.auc*100).toFixed(2)),backgroundColor:'rgba(193,2,48,.8)',borderRadius:4},
+            {label:'Accuracy',data:md.models.map(m=>+(m.accuracy*100).toFixed(2)),backgroundColor:'rgba(34,34,34,.7)',borderRadius:4},
+            {label:'F1',data:md.models.map(m=>+(m.f1*100).toFixed(2)),backgroundColor:'rgba(111,114,113,.6)',borderRadius:4},
+          ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},
+             scales:{y:{min:94,ticks:{callback:v=>v+'%'}}}}
+  });
+}
+
+// ══ INICIALIZACIÓN ══
+async function init() {
+  try {
+    await loadDashboard();
+    await loadCohort();
+    await loadStudentList();
+    await loadMetrics();
+  } catch(e) {
+    console.error('Error cargando datos:', e);
+    document.querySelector('main').innerHTML =
+      `<div style="text-align:center;padding:60px;color:var(--gray)">
+        <h2>⚠️ No se pudo conectar con la API</h2>
+        <p style="margin-top:12px">Asegúrese de que el servidor CLARIA esté ejecutándose.<br>
+        <code>uvicorn main:app --reload</code></p>
+      </div>`;
+  }
+}
+
+// Auto-refresh cada 5 minutos
+setInterval(loadDashboard, 300000);
+init();
+</script>
+</body>
+</html>
