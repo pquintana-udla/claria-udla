@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLARIA — Dashboard Estático | UDLA 2026-2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C10230;--black:#222;--gray:#6f7271;--white:#fff;--border:#e0e0e0;
+  --alto:#dc3545;--mod:#fd7e14;--bajo:#28a745;--light:#f5f5f5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Source Sans Pro",sans-serif;background:#f8f8f8;color:var(--black)}
+header{background:var(--black);display:flex;align-items:center;padding:0 24px;height:64px;gap:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100}
+.logo-bar{width:4px;height:36px;background:var(--red);border-radius:2px}
+header h1{font-size:1.3rem;font-weight:700;color:var(--white)}
+.static-badge{background:#2d6a4f;color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;
+  border-radius:12px;margin-left:auto}
+nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 24px}
+nav button{padding:14px 20px;border:none;background:none;cursor:pointer;font-family:inherit;
+  font-size:.9rem;font-weight:600;color:var(--gray);border-bottom:3px solid transparent;transition:all .2s}
+nav button.active{color:var(--red);border-bottom-color:var(--red)}
+nav button:hover:not(.active){color:var(--black)}
+.container{padding:24px;max-width:1200px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px}
+.kpi{background:var(--white);border-radius:10px;padding:16px;text-align:center;border:1px solid var(--border)}
+.kpi .num{font-size:1.8rem;font-weight:700;color:var(--black)}
+.kpi .lbl{font-size:.75rem;color:var(--gray);margin-top:4px;text-transform:uppercase;letter-spacing:.3px}
+.kpi.alto .num{color:var(--alto)}.kpi.mod .num{color:var(--mod)}.kpi.bajo .num{color:var(--bajo)}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border)}
+.chart-card h3{font-size:.9rem;font-weight:700;color:var(--black);margin-bottom:16px;
+  padding-bottom:8px;border-bottom:2px solid var(--red)}
+.table-controls{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.table-controls input,.table-controls select{padding:8px 12px;border:1px solid var(--border);
+  border-radius:6px;font-family:inherit;font-size:.85rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{background:var(--black);color:var(--white);padding:10px 12px;text-align:left;font-size:.8rem}
+td{padding:9px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:700}
+.badge-alto{background:#fdecea;color:var(--alto)}.badge-mod{background:#fff3e0;color:var(--mod)}
+.badge-bajo{background:#e8f5e9;color:var(--bajo)}
+.prog{width:80px;height:8px;background:#eee;border-radius:4px;display:inline-block;vertical-align:middle}
+.prog-fill{height:100%;border-radius:4px;background:var(--red)}
+.search-box{padding:10px 16px;border:2px solid var(--border);border-radius:8px;
+  font-family:inherit;font-size:.95rem;width:100%;margin-bottom:20px}
+.student-profile{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:24px;margin-bottom:16px}
+.gauge-wrap{text-align:center;padding:20px}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:.9rem}
+.info-row span:last-child{font-weight:600}
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.metric-card{background:var(--white);border-radius:10px;padding:20px;border:1px solid var(--border)}
+.metric-card h3{font-size:.85rem;color:var(--gray);margin-bottom:12px;font-weight:700}
+.metric-big{font-size:2rem;font-weight:700;color:var(--black)}
+.metric-sub{font-size:.8rem;color:var(--gray);margin-top:4px}
+.info-banner{background:#e8f5e9;border:1px solid var(--bajo);border-radius:8px;padding:12px 16px;
+  margin-bottom:16px;font-size:.85rem;color:#2d6a4f;display:flex;align-items:center;gap:8px}
+@media(max-width:768px){.charts-grid,.profile-grid,.metrics-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-bar"></div>
+  <h1>CLARIA</h1>
+  <span style="font-size:.75rem;color:#ccc">Clinical Learning Analytics &amp; Risk Intelligence | UDLA 2026-2</span>
+  <div class="static-badge">&#x1F4BE; MODO ESTÁTICO — Datos semana 6</div>
+</header>
+<nav>
+  <button class="active" onclick="showTab('dashboard')">&#x1F3E0; Dashboard General</button>
+  <button onclick="showTab('cohort')">&#x1F465; Vista Cohorte</button>
+  <button onclick="showTab('individual')">&#x1F464; Vista Individual</button>
+  <button onclick="showTab('metrics')">&#x1F4CA; Métricas del Modelo</button>
+</nav>
+<div class="container">
+
+<div class="info-banner">
+  &#x2139;&#xFE0F; <strong>Dashboard de Presentación (modo offline):</strong> Esta versión funciona directamente desde el navegador sin necesidad de servidor. Los datos corresponden a la cohorte 2026-2, semana 6 del semestre.
+</div>
+
+<!-- TAB 1: DASHBOARD -->
+<div id="tab-dashboard" class="tab active">
+  <div class="kpi-grid" id="kpis"></div>
+  <!-- Timeline 16 semanas -->
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>&#x1F4C5; Línea de Tiempo del Semestre 2026-2 — 16 Semanas</h3>
+    <div style="overflow-x:auto;padding:8px 0">
+      <div id="semesterTimeline" style="display:flex;align-items:center;gap:0;min-width:640px;position:relative;padding:16px 0 32px 0"></div>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:4px;font-size:.8rem;color:var(--gray)">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle"></span>Cohorte prospectiva activa (Semana 6)</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:4px;vertical-align:middle"></span>Semanas restantes</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c8e6c9;border:1px solid var(--bajo);margin-right:4px;vertical-align:middle"></span>Ventana de intervención (Sem. 6–8)</span>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3>Distribución de Riesgo — 98 Estudiantes</h3><canvas id="donutChart" height="220"></canvas></div>
+    <div class="chart-card"><h3>Avance Clínico (%) — Semana 6</h3><canvas id="histChart" height="220"></canvas></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>Top 10 Estudiantes con Mayor Riesgo de Repetición</h3>
+    <canvas id="top10Chart" height="130"></canvas>
+  </div>
+  <div class="chart-card" style="background:#fff8f8">
+    <h3 style="color:var(--alto)">&#x26A0;&#xFE0F; Alertas Prioritarias</h3>
+    <div id="alertsList"></div>
+  </div>
+</div>
+
+<!-- TAB 2: COHORTE -->
+<div id="tab-cohort" class="tab">
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>Vista Cohorte — 98 Estudiantes Activos 2026-2</h3>
+    <div class="table-controls">
+      <input type="text" id="searchInput" placeholder="&#x1F50D; Buscar por ID..." oninput="filterTable()" style="flex:1">
+      <select id="riesgoFilter" onchange="filterTable()">
+        <option value="">Todos los niveles</option>
+        <option value="ALTO">&#x1F534; Alto Riesgo</option>
+        <option value="MODERADO">&#x1F7E1; Moderado</option>
+        <option value="BAJO">&#x1F7E2; Bajo Riesgo</option>
+      </select>
+    </div>
+    <span id="tableCount" style="font-size:.85rem;color:var(--gray);display:block;margin-bottom:8px"></span>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Rank</th><th>ID Estudiante</th><th>Nivel Riesgo</th>
+        <th>P(Riesgo)</th><th>Avance %</th><th>IPC</th><th>Tratamientos</th>
+      </tr></thead>
+      <tbody id="cohortBody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: INDIVIDUAL -->
+<div id="tab-individual" class="tab">
+  <input class="search-box" type="text" id="studentSearch" placeholder="&#x1F50D; Escribe el ID del estudiante (ej: EST_...)..." oninput="searchStudent(this.value)">
+  <div id="studentResults"></div>
+</div>
+
+<!-- TAB 4: MÉTRICAS -->
+<div id="tab-metrics" class="tab">
+  <div class="metrics-grid" id="metricsCards"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3>Importancia de Variables Predictoras (Top 14)</h3><canvas id="featChart" height="300"></canvas></div>
+    <div class="chart-card"><h3>Comparativa AUC · Accuracy · F1</h3><canvas id="metricsBar" height="300"></canvas></div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════
+// DATOS EMBEBIDOS (sin servidor requerido)
+// ═══════════════════════════════════════════════
+const DATA = {"metrics":{"lr_auc":0.9963,"rf_auc":0.9981,"ens_auc":0.9977,"lr_acc":0.966,"rf_acc":0.9773,"ens_acc":0.9717,"lr_f1":0.9755,"rf_f1":0.9839,"ens_f1":0.9798,"lr_tp":239,"lr_fp":4,"lr_fn":8,"lr_tn":102,"rf_tp":244,"rf_fp":5,"rf_fn":3,"rf_tn":101,"ens_tp":242,"ens_fp":5,"ens_fn":5,"ens_tn":101,"w_lr":0.5,"w_rf":0.5,"n_train":353,"n_pred":98,"n_features":62,"semana_datos":6,"semestre":"2026-2"},"riesgo_dist":{"ALTO":10,"MODERADO":5,"BAJO":83},"feature_importance":[{"feature":"cum_PROFILAXIS","importance":0.097048,"rank":1},{"feature":"ratio_op_esp","importance":0.093561,"rank":2},{"feature":"pct_avance","importance":0.088853,"rank":3},{"feature":"trat_baja_complejidad","importance":0.073214,"rank":4},{"feature":"operatoria","importance":0.072547,"rank":5},{"feature":"dif_real_vs_req","importance":0.069789,"rank":6},{"feature":"ipc","importance":0.069789,"rank":7},{"feature":"n_trat_cero","importance":0.068092,"rank":8},{"feature":"diversidad_trat","importance":0.066123,"rank":9},{"feature":"pct_operatoria","importance":0.063892,"rank":10},{"feature":"nivel_cumplimiento_cod","importance":0.062763,"rank":11},{"feature":"n_trat_cumplidos","importance":0.0584,"rank":12},{"feature":"pct_cumplimiento_req","importance":0.0584,"rank":13},{"feature":"indice_complejidad_clinica","importance":0.057529,"rank":14}],"pct_hist":{"0-10%":48,"10-20%":12,"20-30%":17,"30-40%":12,"40-50%":2,"50-60%":6,"60-70%":1,"70%+":0},"students":[{"estudiante_id":"EST_CB7AEF3812F6","pct_avance":0.5854,"ipc":0.5333,"total_tratamientos":24,"prob_Ensemble":0.9919,"prob_LR":0.9883,"prob_RF":0.9955,"nivel_riesgo":"ALTO","rank_riesgo":1,"semana_datos":6},{"estudiante_id":"EST_DC1EBD87EFEC","pct_avance":0.561,"ipc":0.5111,"total_tratamientos":23,"prob_Ensemble":0.9793,"prob_LR":0.9618,"prob_RF":0.9968,"nivel_riesgo":"ALTO","rank_riesgo":2,"semana_datos":6},{"estudiante_id":"EST_854C1B09B45D","pct_avance":0.5122,"ipc":0.4667,"total_tratamientos":21,"prob_Ensemble":0.9782,"prob_LR":0.9674,"prob_RF":0.989,"nivel_riesgo":"ALTO","rank_riesgo":3,"semana_datos":6},{"estudiante_id":"EST_5F6E11F1D388","pct_avance":0.5122,"ipc":0.4667,"total_tratamientos":21,"prob_Ensemble":0.9682,"prob_LR":0.9475,"prob_RF":0.9888,"nivel_riesgo":"ALTO","rank_riesgo":4,"semana_datos":6},{"estudiante_id":"EST_46C271D0574E","pct_avance":0.6341,"ipc":0.5778,"total_tratamientos":26,"prob_Ensemble":0.9646,"prob_LR":0.9492,"prob_RF":0.9799,"nivel_riesgo":"ALTO","rank_riesgo":5,"semana_datos":6},{"estudiante_id":"EST_025DDD8CC930","pct_avance":0.5122,"ipc":0.4667,"total_tratamientos":21,"prob_Ensemble":0.936,"prob_LR":0.8932,"prob_RF":0.9788,"nivel_riesgo":"ALTO","rank_riesgo":6,"semana_datos":6},{"estudiante_id":"EST_181FD79D64EA","pct_avance":0.4634,"ipc":0.4222,"total_tratamientos":19,"prob_Ensemble":0.9197,"prob_LR":0.8897,"prob_RF":0.9497,"nivel_riesgo":"ALTO","rank_riesgo":7,"semana_datos":6},{"estudiante_id":"EST_9CB487C355B5","pct_avance":0.5122,"ipc":0.4667,"total_tratamientos":21,"prob_Ensemble":0.8458,"prob_LR":0.914,"prob_RF":0.7777,"nivel_riesgo":"ALTO","rank_riesgo":8,"semana_datos":6},{"estudiante_id":"EST_BE62D7833920","pct_avance":0.3902,"ipc":0.3556,"total_tratamientos":16,"prob_Ensemble":0.7508,"prob_LR":0.8445,"prob_RF":0.6573,"nivel_riesgo":"ALTO","rank_riesgo":9,"semana_datos":6},{"estudiante_id":"EST_515999B1276A","pct_avance":0.4146,"ipc":0.3778,"total_tratamientos":17,"prob_Ensemble":0.7476,"prob_LR":0.7641,"prob_RF":0.7311,"nivel_riesgo":"ALTO","rank_riesgo":10,"semana_datos":6},{"estudiante_id":"EST_473C798445A0","pct_avance":0.3659,"ipc":0.3333,"total_tratamientos":15,"prob_Ensemble":0.5859,"prob_LR":0.5949,"prob_RF":0.5769,"nivel_riesgo":"MODERADO","rank_riesgo":11,"semana_datos":6},{"estudiante_id":"EST_CE7BFA104A7E","pct_avance":0.3902,"ipc":0.3556,"total_tratamientos":16,"prob_Ensemble":0.5751,"prob_LR":0.5423,"prob_RF":0.6078,"nivel_riesgo":"MODERADO","rank_riesgo":12,"semana_datos":6},{"estudiante_id":"EST_8FC6D346E256","pct_avance":0.3415,"ipc":0.3111,"total_tratamientos":14,"prob_Ensemble":0.5323,"prob_LR":0.6287,"prob_RF":0.4362,"nivel_riesgo":"MODERADO","rank_riesgo":13,"semana_datos":6},{"estudiante_id":"EST_724786CF30C4","pct_avance":0.3659,"ipc":0.3333,"total_tratamientos":15,"prob_Ensemble":0.4803,"prob_LR":0.4432,"prob_RF":0.5174,"nivel_riesgo":"MODERADO","rank_riesgo":14,"semana_datos":6},{"estudiante_id":"EST_43342A314C5E","pct_avance":0.3415,"ipc":0.3111,"total_tratamientos":14,"prob_Ensemble":0.4096,"prob_LR":0.3678,"prob_RF":0.4513,"nivel_riesgo":"MODERADO","rank_riesgo":15,"semana_datos":6},{"estudiante_id":"EST_6EB89E9D8847","pct_avance":0.3415,"ipc":0.3111,"total_tratamientos":14,"prob_Ensemble":0.3972,"prob_LR":0.3467,"prob_RF":0.4475,"nivel_riesgo":"BAJO","rank_riesgo":16,"semana_datos":6},{"estudiante_id":"EST_AA7C806BF261","pct_avance":0.3171,"ipc":0.2889,"total_tratamientos":13,"prob_Ensemble":0.3405,"prob_LR":0.2794,"prob_RF":0.4015,"nivel_riesgo":"BAJO","rank_riesgo":17,"semana_datos":6},{"estudiante_id":"EST_F8F7D627D91F","pct_avance":0.3171,"ipc":0.2889,"total_tratamientos":13,"prob_Ensemble":0.3273,"prob_LR":0.2977,"prob_RF":0.3569,"nivel_riesgo":"BAJO","rank_riesgo":18,"semana_datos":6},{"estudiante_id":"EST_F8F4347BF971","pct_avance":0.3171,"ipc":0.2889,"total_tratamientos":13,"prob_Ensemble":0.2592,"prob_LR":0.278,"prob_RF":0.2405,"nivel_riesgo":"BAJO","rank_riesgo":19,"semana_datos":6},{"estudiante_id":"EST_68208A53E029","pct_avance":0.3415,"ipc":0.3111,"total_tratamientos":14,"prob_Ensemble":0.1829,"prob_LR":0.1065,"prob_RF":0.2593,"nivel_riesgo":"BAJO","rank_riesgo":20,"semana_datos":6},{"estudiante_id":"EST_EDC5D02A7355","pct_avance":0.3171,"ipc":0.2889,"total_tratamientos":13,"prob_Ensemble":0.1502,"prob_LR":0.049,"prob_RF":0.2511,"nivel_riesgo":"BAJO","rank_riesgo":21,"semana_datos":6},{"estudiante_id":"EST_56EEC535953D","pct_avance":0.2927,"ipc":0.2667,"total_tratamientos":12,"prob_Ensemble":0.1454,"prob_LR":0.1644,"prob_RF":0.1265,"nivel_riesgo":"BAJO","rank_riesgo":22,"semana_datos":6},{"estudiante_id":"EST_0D893D531489","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.1301,"prob_LR":0.1894,"prob_RF":0.0709,"nivel_riesgo":"BAJO","rank_riesgo":23,"semana_datos":6},{"estudiante_id":"EST_DE981D42BDB7","pct_avance":0.2683,"ipc":0.2444,"total_tratamientos":11,"prob_Ensemble":0.1187,"prob_LR":0.1547,"prob_RF":0.0827,"nivel_riesgo":"BAJO","rank_riesgo":24,"semana_datos":6},{"estudiante_id":"EST_4E37C138E7BE","pct_avance":0.2683,"ipc":0.2444,"total_tratamientos":11,"prob_Ensemble":0.1108,"prob_LR":0.1271,"prob_RF":0.0945,"nivel_riesgo":"BAJO","rank_riesgo":25,"semana_datos":6},{"estudiante_id":"EST_725AD10063B3","pct_avance":0.2683,"ipc":0.2444,"total_tratamientos":11,"prob_Ensemble":0.1108,"prob_LR":0.1271,"prob_RF":0.0945,"nivel_riesgo":"BAJO","rank_riesgo":26,"semana_datos":6},{"estudiante_id":"EST_9E10A6A5B5EC","pct_avance":0.2927,"ipc":0.2667,"total_tratamientos":12,"prob_Ensemble":0.0811,"prob_LR":0.0506,"prob_RF":0.1115,"nivel_riesgo":"BAJO","rank_riesgo":27,"semana_datos":6},{"estudiante_id":"EST_27863AE582E4","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.0749,"prob_LR":0.0885,"prob_RF":0.0614,"nivel_riesgo":"BAJO","rank_riesgo":28,"semana_datos":6},{"estudiante_id":"EST_9A668194EDAD","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.0637,"prob_LR":0.0807,"prob_RF":0.0468,"nivel_riesgo":"BAJO","rank_riesgo":29,"semana_datos":6},{"estudiante_id":"EST_27452DE882CF","pct_avance":0.2195,"ipc":0.2,"total_tratamientos":9,"prob_Ensemble":0.0553,"prob_LR":0.0662,"prob_RF":0.0444,"nivel_riesgo":"BAJO","rank_riesgo":30,"semana_datos":6},{"estudiante_id":"EST_A51B826E796B","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.053,"prob_LR":0.0637,"prob_RF":0.0423,"nivel_riesgo":"BAJO","rank_riesgo":31,"semana_datos":6},{"estudiante_id":"EST_052FC40DB937","pct_avance":0.2195,"ipc":0.2,"total_tratamientos":9,"prob_Ensemble":0.0523,"prob_LR":0.0609,"prob_RF":0.0437,"nivel_riesgo":"BAJO","rank_riesgo":32,"semana_datos":6},{"estudiante_id":"EST_930339A69FE6","pct_avance":0.2195,"ipc":0.2,"total_tratamientos":9,"prob_Ensemble":0.0484,"prob_LR":0.0558,"prob_RF":0.0409,"nivel_riesgo":"BAJO","rank_riesgo":33,"semana_datos":6},{"estudiante_id":"EST_81A6B6A6E3FE","pct_avance":0.2195,"ipc":0.2,"total_tratamientos":9,"prob_Ensemble":0.0459,"prob_LR":0.0556,"prob_RF":0.0362,"nivel_riesgo":"BAJO","rank_riesgo":34,"semana_datos":6},{"estudiante_id":"EST_391B70CCF82E","pct_avance":0.2683,"ipc":0.2444,"total_tratamientos":11,"prob_Ensemble":0.0445,"prob_LR":0.0378,"prob_RF":0.0511,"nivel_riesgo":"BAJO","rank_riesgo":35,"semana_datos":6},{"estudiante_id":"EST_48AF0E168BB2","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.0343,"prob_LR":0.0242,"prob_RF":0.0444,"nivel_riesgo":"BAJO","rank_riesgo":36,"semana_datos":6},{"estudiante_id":"EST_98470BC8B75C","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.0285,"prob_LR":0.0321,"prob_RF":0.0249,"nivel_riesgo":"BAJO","rank_riesgo":37,"semana_datos":6},{"estudiante_id":"EST_286ED6CEC110","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.0278,"prob_LR":0.0226,"prob_RF":0.0331,"nivel_riesgo":"BAJO","rank_riesgo":38,"semana_datos":6},{"estudiante_id":"EST_E05E346FD799","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.0201,"prob_LR":0.0127,"prob_RF":0.0274,"nivel_riesgo":"BAJO","rank_riesgo":39,"semana_datos":6},{"estudiante_id":"EST_2A20C7B726E2","pct_avance":0.2439,"ipc":0.2222,"total_tratamientos":10,"prob_Ensemble":0.0186,"prob_LR":0.0161,"prob_RF":0.0211,"nivel_riesgo":"BAJO","rank_riesgo":40,"semana_datos":6},{"estudiante_id":"EST_BF92233A05D4","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.0092,"prob_LR":0.0079,"prob_RF":0.0104,"nivel_riesgo":"BAJO","rank_riesgo":41,"semana_datos":6},{"estudiante_id":"EST_14C67399D304","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.007,"prob_LR":0.0087,"prob_RF":0.0054,"nivel_riesgo":"BAJO","rank_riesgo":42,"semana_datos":6},{"estudiante_id":"EST_D83E224B6B7E","pct_avance":0.1463,"ipc":0.1333,"total_tratamientos":6,"prob_Ensemble":0.0062,"prob_LR":0.0063,"prob_RF":0.0061,"nivel_riesgo":"BAJO","rank_riesgo":43,"semana_datos":6},{"estudiante_id":"EST_C519AE6AF345","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.0059,"prob_LR":0.0091,"prob_RF":0.0027,"nivel_riesgo":"BAJO","rank_riesgo":44,"semana_datos":6},{"estudiante_id":"EST_CF637FE74E37","pct_avance":0.1951,"ipc":0.1778,"total_tratamientos":8,"prob_Ensemble":0.0059,"prob_LR":0.0091,"prob_RF":0.0027,"nivel_riesgo":"BAJO","rank_riesgo":45,"semana_datos":6},{"estudiante_id":"EST_436387C0A2E3","pct_avance":0.1707,"ipc":0.1556,"total_tratamientos":7,"prob_Ensemble":0.0051,"prob_LR":0.0064,"prob_RF":0.0039,"nivel_riesgo":"BAJO","rank_riesgo":46,"semana_datos":6},{"estudiante_id":"EST_8FD192A66283","pct_avance":0.1707,"ipc":0.1556,"total_tratamientos":7,"prob_Ensemble":0.0047,"prob_LR":0.0081,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":47,"semana_datos":6},{"estudiante_id":"EST_7D902DAE714F","pct_avance":0.1707,"ipc":0.1556,"total_tratamientos":7,"prob_Ensemble":0.0036,"prob_LR":0.0063,"prob_RF":0.0008,"nivel_riesgo":"BAJO","rank_riesgo":48,"semana_datos":6},{"estudiante_id":"EST_6EF16674E072","pct_avance":0.122,"ipc":0.1111,"total_tratamientos":5,"prob_Ensemble":0.0025,"prob_LR":0.0036,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":49,"semana_datos":6},{"estudiante_id":"EST_296443839D64","pct_avance":0.122,"ipc":0.1111,"total_tratamientos":5,"prob_Ensemble":0.0022,"prob_LR":0.0031,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":50,"semana_datos":6},{"estudiante_id":"EST_5017A830169C","pct_avance":0.0976,"ipc":0.0889,"total_tratamientos":4,"prob_Ensemble":0.0017,"prob_LR":0.0021,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":51,"semana_datos":6},{"estudiante_id":"EST_AA21EE782A13","pct_avance":0.0976,"ipc":0.0889,"total_tratamientos":4,"prob_Ensemble":0.0017,"prob_LR":0.0021,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":52,"semana_datos":6},{"estudiante_id":"EST_F143FDB5AD40","pct_avance":0.0976,"ipc":0.0889,"total_tratamientos":4,"prob_Ensemble":0.0014,"prob_LR":0.0015,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":53,"semana_datos":6},{"estudiante_id":"EST_D63999FA3DFF","pct_avance":0.0976,"ipc":0.0889,"total_tratamientos":4,"prob_Ensemble":0.0014,"prob_LR":0.0015,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":54,"semana_datos":6},{"estudiante_id":"EST_2AF70EC2C7CE","pct_avance":0.0732,"ipc":0.0667,"total_tratamientos":3,"prob_Ensemble":0.0014,"prob_LR":0.0014,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":55,"semana_datos":6},{"estudiante_id":"EST_40E560E58C9E","pct_avance":0.0976,"ipc":0.0889,"total_tratamientos":4,"prob_Ensemble":0.0014,"prob_LR":0.0015,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":56,"semana_datos":6},{"estudiante_id":"EST_2E6C957C6AA1","pct_avance":0.0732,"ipc":0.0667,"total_tratamientos":3,"prob_Ensemble":0.0012,"prob_LR":0.0011,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":57,"semana_datos":6},{"estudiante_id":"EST_1C3C191BF7B1","pct_avance":0.0732,"ipc":0.0667,"total_tratamientos":3,"prob_Ensemble":0.0011,"prob_LR":0.0008,"prob_RF":0.0014,"nivel_riesgo":"BAJO","rank_riesgo":58,"semana_datos":6},{"estudiante_id":"EST_71A2F52B3ACE","pct_avance":0.0488,"ipc":0.0444,"total_tratamientos":2,"prob_Ensemble":0.0009,"prob_LR":0.0007,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":59,"semana_datos":6},{"estudiante_id":"EST_A0FBB69A52E8","pct_avance":0.0488,"ipc":0.0444,"total_tratamientos":2,"prob_Ensemble":0.0009,"prob_LR":0.0007,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":60,"semana_datos":6},{"estudiante_id":"EST_816730AAA874","pct_avance":0.0488,"ipc":0.0444,"total_tratamientos":2,"prob_Ensemble":0.0009,"prob_LR":0.0007,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":61,"semana_datos":6},{"estudiante_id":"EST_433CB87D257A","pct_avance":0.0488,"ipc":0.0444,"total_tratamientos":2,"prob_Ensemble":0.0008,"prob_LR":0.0008,"prob_RF":0.0007,"nivel_riesgo":"BAJO","rank_riesgo":62,"semana_datos":6},{"estudiante_id":"EST_D3351919C1FB","pct_avance":0.0244,"ipc":0.0222,"total_tratamientos":1,"prob_Ensemble":0.0007,"prob_LR":0.0004,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":63,"semana_datos":6},{"estudiante_id":"EST_F96FD4EC0BD8","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":64,"semana_datos":6},{"estudiante_id":"EST_F6381262914E","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":65,"semana_datos":6},{"estudiante_id":"EST_B9C42977361F","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":66,"semana_datos":6},{"estudiante_id":"EST_1C2A5D7B42C5","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":67,"semana_datos":6},{"estudiante_id":"EST_FBB5A441B908","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":68,"semana_datos":6},{"estudiante_id":"EST_4CECC84443F7","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":69,"semana_datos":6},{"estudiante_id":"EST_D106D30F4B54","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":70,"semana_datos":6},{"estudiante_id":"EST_0FB70C95530F","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":71,"semana_datos":6},{"estudiante_id":"EST_B77EC6343896","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":72,"semana_datos":6},{"estudiante_id":"EST_6E2085642351","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":73,"semana_datos":6},{"estudiante_id":"EST_42541D16C396","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":74,"semana_datos":6},{"estudiante_id":"EST_E9EF7300C1CA","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":75,"semana_datos":6},{"estudiante_id":"EST_82C122D1ECC6","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":76,"semana_datos":6},{"estudiante_id":"EST_918B7A8BF117","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":77,"semana_datos":6},{"estudiante_id":"EST_97C37D943CBB","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":78,"semana_datos":6},{"estudiante_id":"EST_A0C85B950BC9","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":79,"semana_datos":6},{"estudiante_id":"EST_48E5C96B42F3","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":80,"semana_datos":6},{"estudiante_id":"EST_811B6DB7FD39","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":81,"semana_datos":6},{"estudiante_id":"EST_2CAF141A67C9","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":82,"semana_datos":6},{"estudiante_id":"EST_FE8B41D3728B","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":83,"semana_datos":6},{"estudiante_id":"EST_3A38A88F9E4D","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":84,"semana_datos":6},{"estudiante_id":"EST_D38F43FA0320","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":85,"semana_datos":6},{"estudiante_id":"EST_81059A1EFBAA","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":86,"semana_datos":6},{"estudiante_id":"EST_37D4959F78D9","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":87,"semana_datos":6},{"estudiante_id":"EST_5833D0E6D82E","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":88,"semana_datos":6},{"estudiante_id":"EST_FB1E3BEABE48","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":89,"semana_datos":6},{"estudiante_id":"EST_508BB8B578C6","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":90,"semana_datos":6},{"estudiante_id":"EST_E9CE51CC796F","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":91,"semana_datos":6},{"estudiante_id":"EST_F1DD65CB31DD","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":92,"semana_datos":6},{"estudiante_id":"EST_63A51D864B48","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":93,"semana_datos":6},{"estudiante_id":"EST_8D4E0A3C5E7E","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":94,"semana_datos":6},{"estudiante_id":"EST_5EC2DB7F0B9C","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":95,"semana_datos":6},{"estudiante_id":"EST_8F4615C52BB3","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":96,"semana_datos":6},{"estudiante_id":"EST_9C652257E8BE","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":97,"semana_datos":6},{"estudiante_id":"EST_4BF665022368","pct_avance":0.0,"ipc":0.0,"total_tratamientos":0,"prob_Ensemble":0.0005,"prob_LR":0.0,"prob_RF":0.001,"nivel_riesgo":"BAJO","rank_riesgo":98,"semana_datos":6}]};
+
+// ═══════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════
+const charts = {};
+const $ = id => document.getElementById(id);
+const pct = v => (v*100).toFixed(1)+'%';
+const fmt = (v,d=2) => typeof v==='number' ? v.toFixed(d) : v;
+const badgeClass = r => r==='ALTO'?'badge-alto':r==='MODERADO'?'badge-mod':'badge-bajo';
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  $('tab-'+name).classList.add('active');
+  document.querySelectorAll('nav button')[['dashboard','cohort','individual','metrics'].indexOf(name)].classList.add('active');
+  if(name==='dashboard') renderDashboard();
+  if(name==='cohort') renderCohort();
+  if(name==='metrics') renderMetrics();
+}
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ═══════════════════════════════════════════════
+// SEMESTER TIMELINE
+// ═══════════════════════════════════════════════
+function renderTimeline(semana) {
+  const el = $('semesterTimeline'); if(!el) return;
+  let html = '';
+  for(let w=1;w<=16;w++){
+    const active = w===semana;
+    const intervention = w>=6 && w<=8;
+    const bg = active?'var(--red)': intervention?'#c8e6c9':'#ddd';
+    const tc = active?'#fff':'#555';
+    const sz = active?'38px':'28px';
+    const border = intervention&&!active?'2px solid var(--bajo)':'2px solid transparent';
+    const shadow = active?'0 0 0 4px rgba(193,2,48,.25)':'none';
+    html+=`<div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative">
+      ${w>1?'<div style="position:absolute;top:19px;left:-50%;width:100%;height:2px;background:#ddd;z-index:0"></div>':''}
+      <div title="Semana ${w}${active?' — Cohorte Prospectiva (98 estudiantes)':''}"
+        style="width:${sz};height:${sz};border-radius:50%;background:${bg};display:flex;align-items:center;
+        justify-content:center;font-size:.7rem;font-weight:700;color:${tc};border:${border};
+        position:relative;z-index:1;box-shadow:${shadow};cursor:default;transition:all .2s">
+        ${w}
+      </div>
+      ${active?`<div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+        font-size:.62rem;font-weight:700;color:var(--red);white-space:nowrap">▲ Sem.6</div>`:''}
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+// TAB 1: DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDashboard() {
+  const d = DATA; const m = d.metrics;
+  renderTimeline(m.semana_datos||6);
+
+  // KPIs
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="num">${d.students.length}</div><div class="lbl">Estudiantes Evaluados</div></div>
+    <div class="kpi"><div class="num">${pct(d.students.reduce((a,s)=>a+s.pct_avance,0)/d.students.length)}</div><div class="lbl">Avance Promedio</div></div>
+    <div class="kpi"><div class="num">${fmt(d.students.reduce((a,s)=>a+s.ipc,0)/d.students.length,3)}</div><div class="lbl">IPC Promedio</div></div>
+    <div class="kpi alto"><div class="num">${d.riesgo_dist.ALTO}</div><div class="lbl">🔴 Alto Riesgo</div></div>
+    <div class="kpi mod"><div class="num">${d.riesgo_dist.MODERADO}</div><div class="lbl">🟡 Moderado</div></div>
+    <div class="kpi bajo"><div class="num">${d.riesgo_dist.BAJO}</div><div class="lbl">🟢 Bajo Riesgo</div></div>
+    <div class="kpi"><div class="num">${(m.ens_auc*100).toFixed(2)}%</div><div class="lbl">AUC Ensemble</div></div>`;
+
+  // Donut
+  destroyChart('donut');
+  charts['donut'] = new Chart($('donutChart'),{type:'doughnut',
+    data:{labels:['Alto Riesgo','Moderado','Bajo Riesgo'],
+      datasets:[{data:[d.riesgo_dist.ALTO,d.riesgo_dist.MODERADO,d.riesgo_dist.BAJO],
+        backgroundColor:['#dc3545','#fd7e14','#28a745'],borderWidth:2}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+
+  // Histogram
+  destroyChart('hist');
+  const hd = d.pct_hist;
+  charts['hist'] = new Chart($('histChart'),{type:'bar',
+    data:{labels:Object.keys(hd),datasets:[{label:'Estudiantes',data:Object.values(hd),
+      backgroundColor:'rgba(193,2,48,.7)',borderColor:'#C10230',borderWidth:1}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'N° Estudiantes'}}}}});
+
+  // Top 10
+  const top10 = [...d.students].sort((a,b)=>a.rank_riesgo-b.rank_riesgo).slice(0,10);
+  destroyChart('top10');
+  charts['top10'] = new Chart($('top10Chart'),{type:'bar',
+    data:{labels:top10.map(s=>s.estudiante_id.slice(-8)),
+      datasets:[{label:'P(Repetición)',data:top10.map(s=>+(s.prob_Ensemble*100).toFixed(1)),
+        backgroundColor:'#C10230',borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{min:0,max:100,title:{display:true,text:'Probabilidad de Repetición (%)'}},
+        y:{ticks:{font:{size:11}}}}}});
+
+  // Alerts
+  const alerts = top10.filter(s=>s.nivel_riesgo==='ALTO');
+  $('alertsList').innerHTML = alerts.length===0
+    ? '<p style="color:var(--bajo);padding:12px">✅ No hay estudiantes en ALTO riesgo en esta cohorte.</p>'
+    : alerts.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f5f5f5">
+        <span style="font-size:1.3rem">🔴</span>
+        <div>
+          <strong>${s.estudiante_id.slice(-10)}</strong>
+          <span style="margin-left:8px;font-size:.85rem;color:var(--gray)">P(riesgo)=${pct(s.prob_Ensemble)} | Avance: ${pct(s.pct_avance)} | Rank #${s.rank_riesgo}</span>
+        </div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TAB 2: COHORTE
+// ═══════════════════════════════════════════════
+let filteredStudents = [...DATA.students].sort((a,b)=>a.rank_riesgo-b.rank_riesgo);
+function renderCohort() { filterTable(); }
+function filterTable() {
+  const q = ($('searchInput')||{value:''}).value.toLowerCase();
+  const r = ($('riesgoFilter')||{value:''}).value;
+  filteredStudents = DATA.students.filter(s=>
+    (!q || s.estudiante_id.toLowerCase().includes(q)) &&
+    (!r || s.nivel_riesgo===r)
+  ).sort((a,b)=>a.rank_riesgo-b.rank_riesgo);
+  $('tableCount').textContent = `Mostrando ${filteredStudents.length} de ${DATA.students.length} estudiantes`;
+  $('cohortBody').innerHTML = filteredStudents.map(s=>`
+    <tr>
+      <td style="font-weight:700;color:var(--gray)">#${s.rank_riesgo}</td>
+      <td style="font-family:monospace;font-size:.82rem">${s.estudiante_id}</td>
+      <td><span class="badge ${badgeClass(s.nivel_riesgo)}">${s.nivel_riesgo}</span></td>
+      <td style="font-weight:700;color:${s.nivel_riesgo==='ALTO'?'var(--alto)':s.nivel_riesgo==='MODERADO'?'var(--mod)':'var(--bajo)'}">${pct(s.prob_Ensemble)}</td>
+      <td><span class="prog"><span class="prog-fill" style="width:${Math.min(s.pct_avance*100,100)}%"></span></span> ${pct(s.pct_avance)}</td>
+      <td>${fmt(s.ipc,3)}</td>
+      <td>${s.total_tratamientos}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TAB 3: INDIVIDUAL
+// ═══════════════════════════════════════════════
+function searchStudent(query) {
+  const q = query.toLowerCase().trim();
+  if(!q){$('studentResults').innerHTML='';return;}
+  const matches = DATA.students.filter(s=>s.estudiante_id.toLowerCase().includes(q));
+  if(matches.length===0){$('studentResults').innerHTML='<p style="color:var(--gray);padding:16px">No se encontraron estudiantes.</p>';return;}
+  if(matches.length>5){$('studentResults').innerHTML=`<p style="color:var(--gray);padding:8px">${matches.length} resultados — refina la búsqueda.</p>`;return;}
+  $('studentResults').innerHTML = matches.map(s=>{
+    const rColor = s.nivel_riesgo==='ALTO'?'var(--alto)':s.nivel_riesgo==='MODERADO'?'var(--mod)':'var(--bajo)';
+    const probPct = Math.round(s.prob_Ensemble*100);
+    return `<div class="student-profile">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <div style="font-size:1rem;font-weight:700;font-family:monospace">${s.estudiante_id}</div>
+          <div style="font-size:.85rem;color:var(--gray)">Cohorte 2026-2 · Semana ${s.semana_datos}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:2rem;font-weight:700;color:${rColor}">${probPct}%</div>
+          <span class="badge ${badgeClass(s.nivel_riesgo)}" style="font-size:.85rem">${s.nivel_riesgo} RIESGO</span>
+          <div style="font-size:.8rem;color:var(--gray);margin-top:4px">Rank #${s.rank_riesgo} / 98</div>
+        </div>
+      </div>
+      <div class="profile-grid">
+        <div>
+          <div class="info-row"><span>Avance clínico</span><span>${pct(s.pct_avance)}</span></div>
+          <div class="info-row"><span>IPC</span><span>${fmt(s.ipc,4)}</span></div>
+          <div class="info-row"><span>Total tratamientos</span><span>${s.total_tratamientos}</span></div>
+          <div class="info-row"><span>P(Repetición) — LR</span><span>${pct(s.prob_LR)}</span></div>
+          <div class="info-row"><span>P(Repetición) — RF</span><span>${pct(s.prob_RF)}</span></div>
+          <div class="info-row"><span>P(Repetición) — Ensemble</span><span style="font-weight:700;color:${rColor}">${pct(s.prob_Ensemble)}</span></div>
+        </div>
+        <div style="background:var(--light);border-radius:8px;padding:16px">
+          <div style="font-size:.85rem;font-weight:700;color:var(--gray);margin-bottom:8px">INTERPRETACIÓN</div>
+          ${probPct>=65?'<p style="font-size:.85rem;color:var(--alto)">⚠️ Riesgo elevado de repetición semestral. Intervención docente recomendada antes de semana 8.</p>':''}
+          ${probPct>=40&&probPct<65?'<p style="font-size:.85rem;color:var(--mod)">⚡ Riesgo moderado. Monitoreo intensivo recomendado en próximas 2 semanas.</p>':''}
+          ${probPct<40?'<p style="font-size:.85rem;color:var(--bajo)">✅ Perfil de bajo riesgo. Mantener seguimiento rutinario semestral.</p>':''}
+          <div style="margin-top:12px;font-size:.8rem;color:var(--gray)">
+            <strong>Nota:</strong> Las predicciones se basan en datos de actividad clínica a semana 6.
+            La validación definitiva ocurre al cierre del semestre 2026-2.
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TAB 4: MÉTRICAS
+// ═══════════════════════════════════════════════
+function renderMetrics() {
+  const m = DATA.metrics;
+  const models = [
+    {name:'Logistic Regression',auc:m.lr_auc,acc:m.lr_acc,f1:m.lr_f1,color:'#3498db'},
+    {name:'Random Forest (80 árboles)',auc:m.rf_auc,acc:m.rf_acc,f1:m.rf_f1,color:'#27ae60'},
+    {name:'Ensemble AUC-ponderado',auc:m.ens_auc,acc:m.ens_acc,f1:m.ens_f1,color:'#C10230'},
+  ];
+  $('metricsCards').innerHTML = models.map(mod=>`
+    <div class="metric-card">
+      <h3>${mod.name}</h3>
+      <div class="metric-big">${(mod.auc*100).toFixed(2)}%</div>
+      <div class="metric-sub">AUC-ROC</div>
+      <div style="margin-top:12px;display:flex;gap:16px">
+        <div><div style="font-size:1.1rem;font-weight:700">${(mod.acc*100).toFixed(1)}%</div><div class="metric-sub">Accuracy</div></div>
+        <div><div style="font-size:1.1rem;font-weight:700">${(mod.f1*100).toFixed(1)}%</div><div class="metric-sub">F1-Score</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:.75rem;color:var(--gray)">n_train=${m.n_train} · n_features=${m.n_features}</div>
+    </div>`).join('');
+
+  destroyChart('feat');
+  const feats = DATA.feature_importance.slice(0,14);
+  charts['feat'] = new Chart($('featChart'),{type:'bar',
+    data:{labels:feats.map(f=>f.feature),
+      datasets:[{label:'Importancia (%)',data:feats.map(f=>+(f.importance*100).toFixed(2)),
+        backgroundColor:'rgba(193,2,48,.75)',borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{title:{display:true,text:'Importancia (% normalizado)'}},
+        y:{ticks:{font:{size:10}}}}}});
+
+  destroyChart('metricsBar');
+  charts['metricsBar'] = new Chart($('metricsBar'),{type:'bar',
+    data:{labels:['LR','RF','Ensemble'],
+      datasets:[
+        {label:'AUC',data:models.map(m=>+(m.auc*100).toFixed(2)),backgroundColor:'rgba(52,152,219,.8)',borderRadius:3},
+        {label:'Accuracy',data:models.map(m=>+(m.acc*100).toFixed(1)),backgroundColor:'rgba(39,174,96,.8)',borderRadius:3},
+        {label:'F1-Score',data:models.map(m=>+(m.f1*100).toFixed(1)),backgroundColor:'rgba(193,2,48,.8)',borderRadius:3},
+      ]},
+    options:{responsive:true,scales:{y:{min:90,max:101,title:{display:true,text:'%'}}},
+      plugins:{legend:{position:'top'}}}});
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  renderDashboard();
+});
+</script>
+</body>
+</html>
